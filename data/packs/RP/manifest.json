@@ -1,9 +1,9 @@
 {
     "format_version": 2,
     "header": {
-        "name": "Amethyst-Template RP",
+        "name": "ForgeCraft RP",
         "description": "By FrederoxDev",
-        "uuid": "<replace-with-a-new-uuid>",
+        "uuid": "cffff83a-ce10-4278-b2ac-36c6f3ac4924",
         "version": [
             1,
             0,
@@ -18,7 +18,7 @@
     "modules": [
         {
             "type": "resources",
-            "uuid": "<replace-with-a-new-uuid>",
+            "uuid": "61bc7ecc-ad07-4eba-a3d3-c8fd4141082c",
             "version": [
                 1,
                 0,
