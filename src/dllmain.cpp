@@ -10,24 +10,20 @@
 #include <common/blocks/ModBlocks.hpp>
 #include <client/util/TextureUtil.hpp>
 
+#include "common/materials/MaterialManager.hpp"
+
 void generateTextures(AbstractTextureAccessor& accessor, cg::ImageBuffer& image) {
 	Log::Info("Generating texture");
 	auto loc = ResourceLocation("textures/items/pickaxe_head");
 	auto& img_head = accessor.getCachedImageOrLoadSync(loc, true);
-	img_head = TextureUtil::paletteSwap(
-		img_head,
-		std::vector<uint32_t>{
-			0xFFffffff, 
-			0xFFd8d8d8
-		},
-		std::vector<uint32_t>{
-			0xFF00FF00, // green
-			0xFF004400  // dark green
-		}
-	);
 
 	auto loc2 = ResourceLocation("textures/items/tool_handle");
 	auto& img_handle = accessor.getCachedImageOrLoadSync(loc2, true);
+	img_handle = TextureUtil::paletteSwap(
+		img_handle,
+		ForgeCraft::pallete_src_tool_handle,
+		ForgeCraft::pallete_dst_tool_handle_wood
+	);
 
 	auto newImage = TextureUtil::combineImage(img_handle, img_head);
 	image = newImage;
