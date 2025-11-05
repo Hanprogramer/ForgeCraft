@@ -1,20 +1,91 @@
 ﻿#include "dllmain.hpp"
+#include <amethyst/runtime/events/RegisterEvents.hpp>
+#include <amethyst/runtime/events/GameEvents.hpp>
+#include "items/ModItems.hpp"
 
-// Subscribed to amethysts on start join game event in Initialize
-void OnStartJoinGame(OnStartJoinGameEvent& event)
-{
-    Log::Info("OnStartJoinGame!");
+#include <mc/src-client/common/client/game/MinecraftGame.hpp>
+#include <mc/src-deps/core/resource/ResourceHelper.hpp>
+#include <mc/src-deps/coregraphics/ImageBuffer.hpp>
+#include <blocks/ModBlocks.hpp>
+
+
+void generateTextures(AbstractTextureAccessor& accessor, cg::ImageBuffer& image) {
+	Log::Info("Generating texture");
+	auto loc = ResourceLocation("textures/items/quartz:trimmed_leather_helmet");
+	auto& new_image = accessor.getCachedImageOrLoadSync(loc, false);
+	image = cg::ImageBuffer(new_image);
 }
 
-// Ran when the mod is loaded into the game by AmethystRuntime
-ModFunction void Initialize(AmethystContext& ctx, const Amethyst::Mod& mod) 
+SafetyInlineHook _TextureAtlas_addRuntimeImageGenerator;
+void TextureAtlas_addRuntimeImageGenerator(TextureAtlas* self, std::weak_ptr<RuntimeImageGeneratorInfo> info) {
+	auto val = info.lock();
+	auto newInfo = RuntimeImageGeneratorInfo(val->unk0, val->loc, generateTextures);
+	auto shared = std::make_shared<RuntimeImageGeneratorInfo>(newInfo);
+	auto newWeak = std::weak_ptr(shared);
+
+	Log::Info("Adding runtime image generator: {} -> {}", newInfo.unk0, newInfo.loc.mPath);
+	_TextureAtlas_addRuntimeImageGenerator.call<void, TextureAtlas*, std::weak_ptr<RuntimeImageGeneratorInfo>>(self, newWeak);
+}
+
+
+const char materials[][10] = {
+	"iron",
+	"gold",
+	"copper",
+	"emerald",
+	"obsidian",
+	"redstone",
+	"amethyst"
+};
+
+const char parts[][20] = {
+	"sword_blade",
+	"sword_longblade",
+	"sword_shortblade",
+	"pickaxe_head",
+	"axe_head",
+	"shovel_head",
+	"hoe_head",
+	"binding",
+	"sword_hilt"
+};
+
+
+std::shared_ptr<RuntimeImageGeneratorInfo> shared;
+
+void OnStartJoinGame(OnStartJoinGameEvent& ev) {
+}
+
+
+
+SafetyHookInline __finishReloadingResources;
+static __int64 _finishReloadingResources(__int64** a1, __int64 a2) {
+	auto result = __finishReloadingResources.call<__int64, __int64**, __int64>(a1, a2);
+	Log::Info("Finished loading packs. Now registering atlas generators");
+	if (Amethyst::IsOnMainClientThread()) {
+		Log::Info("Registering custom generator for sword icons");
+		auto mc = Amethyst::GetClientCtx().mClientInstance;
+		auto& game = mc->mMinecraftGame;
+
+		auto& atlas = game->mTextureAtlas;
+		auto gen = RuntimeImageGeneratorInfo("forgecraft:quartz", ResourceLocation("textures/items/quartz:trimmed_leather_helmet"), &generateTextures);
+		shared = std::make_shared<RuntimeImageGeneratorInfo>(gen);
+		//atlas->addRuntimeImageGenerator(shared);
+	}
+	return result;
+}
+
+ModFunction void Initialize(AmethystContext& ctx, const Amethyst::Mod& mod)
 {
-    // Initialize Amethyst mod backend
-    Amethyst::InitializeAmethystMod(ctx, mod);
+	Amethyst::InitializeAmethystMod(ctx, mod);
+	Amethyst::GetEventBus().AddListener<RegisterItemsEvent>(&ModItems::RegisterItems);
+	Amethyst::GetEventBus().AddListener<RegisterItemsEvent>(&ModBlocks::RegisterBlockItems);
+	Amethyst::GetEventBus().AddListener<RegisterBlocksEvent>(&ModBlocks::RegisterModBlocks);
+	Amethyst::GetEventBus().AddListener<OnStartJoinGameEvent>(&OnStartJoinGame);
 
-    // Logging from <Amethyst/Log.h>
-    Log::Info("Hello, Amethyst World!");
-
-    // Add a listener to a built in amethyst event
-    Amethyst::GetEventBus().AddListener<OnStartJoinGameEvent>(&OnStartJoinGame);
+	Amethyst::HookManager& hooks = Amethyst::GetHookManager();
+	hooks.CreateHookAbsolute(__finishReloadingResources,
+		SigScan("48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 4C 8B E2 ? ? ? 48 89 54 24 ? 33 F6"),
+		&_finishReloadingResources);
+	HOOK(TextureAtlas, addRuntimeImageGenerator);
 }

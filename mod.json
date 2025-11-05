@@ -3,7 +3,7 @@
     "meta": {
         "name": "ForgeCraft",
         "version": "0.0.0",
-        "namespace": "amethyst_template",
+        "namespace": "forgecraft",
         "author": "FrederoxDev",
         "uuid": "cffff83a-ce10-4278-b2ac-36c6f3ac4924",
         "dependencies": [
