@@ -1,19 +1,36 @@
 ﻿#include "dllmain.hpp"
 #include <amethyst/runtime/events/RegisterEvents.hpp>
 #include <amethyst/runtime/events/GameEvents.hpp>
-#include "items/ModItems.hpp"
 
 #include <mc/src-client/common/client/game/MinecraftGame.hpp>
 #include <mc/src-deps/core/resource/ResourceHelper.hpp>
 #include <mc/src-deps/coregraphics/ImageBuffer.hpp>
-#include <blocks/ModBlocks.hpp>
 
+#include <common/items/ModItems.hpp>
+#include <common/blocks/ModBlocks.hpp>
+#include <client/util/TextureUtil.hpp>
 
 void generateTextures(AbstractTextureAccessor& accessor, cg::ImageBuffer& image) {
 	Log::Info("Generating texture");
-	/*auto loc = ResourceLocation("textures/items/quartz:trimmed_leather_helmet");
-	auto& new_image = accessor.getCachedImageOrLoadSync(loc, false);
-	image = cg::ImageBuffer(new_image);*/
+	auto loc = ResourceLocation("textures/items/pickaxe_head");
+	auto& img_head = accessor.getCachedImageOrLoadSync(loc, true);
+	img_head = TextureUtil::paletteSwap(
+		img_head,
+		std::vector<uint32_t>{
+			0xFFffffff, 
+			0xFFd8d8d8
+		},
+		std::vector<uint32_t>{
+			0xFF00FF00, // green
+			0xFF004400  // dark green
+		}
+	);
+
+	auto loc2 = ResourceLocation("textures/items/tool_handle");
+	auto& img_handle = accessor.getCachedImageOrLoadSync(loc2, true);
+
+	auto newImage = TextureUtil::combineImage(img_handle, img_head);
+	image = newImage;
 }
 
 bool hasAddedOwnGenerators = false;
