@@ -11,20 +11,38 @@
 
 void generateTextures(AbstractTextureAccessor& accessor, cg::ImageBuffer& image) {
 	Log::Info("Generating texture");
-	auto loc = ResourceLocation("textures/items/quartz:trimmed_leather_helmet");
+	/*auto loc = ResourceLocation("textures/items/quartz:trimmed_leather_helmet");
 	auto& new_image = accessor.getCachedImageOrLoadSync(loc, false);
-	image = cg::ImageBuffer(new_image);
+	image = cg::ImageBuffer(new_image);*/
 }
 
-SafetyInlineHook _TextureAtlas_addRuntimeImageGenerator;
-void TextureAtlas_addRuntimeImageGenerator(TextureAtlas* self, std::weak_ptr<RuntimeImageGeneratorInfo> info) {
-	auto val = info.lock();
-	auto newInfo = RuntimeImageGeneratorInfo(val->unk0, val->loc, generateTextures);
-	auto shared = std::make_shared<RuntimeImageGeneratorInfo>(newInfo);
-	auto newWeak = std::weak_ptr(shared);
+bool hasAddedOwnGenerators = false;
+std::shared_ptr<RuntimeImageGeneratorInfo> shared;
 
-	Log::Info("Adding runtime image generator: {} -> {}", newInfo.unk0, newInfo.loc.mPath);
-	_TextureAtlas_addRuntimeImageGenerator.call<void, TextureAtlas*, std::weak_ptr<RuntimeImageGeneratorInfo>>(self, newWeak);
+SafetyInlineHook _TextureAtlas_addRuntimeImageGenerator;
+
+void TextureAtlas_addRuntimeImageGenerator(TextureAtlas* self, std::weak_ptr<RuntimeImageGeneratorInfo> info) {
+	// auto val = info.lock();
+	// auto newInfo = RuntimeImageGeneratorInfo(val->unk0, val->loc, generateTextures);
+	// auto shared = std::make_shared<RuntimeImageGeneratorInfo>(newInfo);
+	// auto newWeak = std::weak_ptr(shared);
+
+	// Log::Info("Adding runtime image generator: {} -> {}", newInfo.unk0, newInfo.loc.mPath);
+
+	if (!hasAddedOwnGenerators) {
+		hasAddedOwnGenerators = true;
+
+		shared = std::make_shared<RuntimeImageGeneratorInfo>(
+			"test_icon:test_icon",
+			ResourceLocation("textures/items/test_icon"),
+			generateTextures
+		);
+
+		std::weak_ptr<RuntimeImageGeneratorInfo> newWeak = shared;
+		self->addRuntimeImageGenerator(newWeak);
+	}
+
+	_TextureAtlas_addRuntimeImageGenerator.call<void, TextureAtlas*, std::weak_ptr<RuntimeImageGeneratorInfo>>(self, info);
 }
 
 
@@ -50,30 +68,21 @@ const char parts[][20] = {
 	"sword_hilt"
 };
 
-
-std::shared_ptr<RuntimeImageGeneratorInfo> shared;
-
 void OnStartJoinGame(OnStartJoinGameEvent& ev) {
 }
 
 
 
-SafetyHookInline __finishReloadingResources;
-static __int64 _finishReloadingResources(__int64** a1, __int64 a2) {
-	auto result = __finishReloadingResources.call<__int64, __int64**, __int64>(a1, a2);
-	Log::Info("Finished loading packs. Now registering atlas generators");
-	if (Amethyst::IsOnMainClientThread()) {
-		Log::Info("Registering custom generator for sword icons");
-		auto mc = Amethyst::GetClientCtx().mClientInstance;
-		auto& game = mc->mMinecraftGame;
-
-		auto& atlas = game->mTextureAtlas;
-		auto gen = RuntimeImageGeneratorInfo("forgecraft:quartz", ResourceLocation("textures/items/quartz:trimmed_leather_helmet"), &generateTextures);
-		shared = std::make_shared<RuntimeImageGeneratorInfo>(gen);
-		//atlas->addRuntimeImageGenerator(shared);
-	}
-	return result;
-}
+//SafetyHookInline __finishReloadingResources;
+//static __int64 _finishReloadingResources(__int64** a1, __int64 a2) {
+//	auto result = __finishReloadingResources.call<__int64, __int64**, __int64>(a1, a2);
+//
+//	Log::Info("Finished loading packs. Now registering atlas generators");
+//
+//
+//
+//	return result;
+//}
 
 ModFunction void Initialize(AmethystContext& ctx, const Amethyst::Mod& mod)
 {
@@ -84,8 +93,10 @@ ModFunction void Initialize(AmethystContext& ctx, const Amethyst::Mod& mod)
 	Amethyst::GetEventBus().AddListener<OnStartJoinGameEvent>(&OnStartJoinGame);
 
 	Amethyst::HookManager& hooks = Amethyst::GetHookManager();
-	hooks.CreateHookAbsolute(__finishReloadingResources,
+
+	/*hooks.CreateHookAbsolute(__finishReloadingResources,
 		SigScan("48 89 5C 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 ? ? ? ? 4C 8B E2 ? ? ? 48 89 54 24 ? 33 F6"),
-		&_finishReloadingResources);
-	HOOK(TextureAtlas, addRuntimeImageGenerator);
+		&_finishReloadingResources);*/
+
+	 HOOK(TextureAtlas, addRuntimeImageGenerator);
 }
