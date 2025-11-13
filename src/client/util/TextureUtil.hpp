@@ -3,6 +3,7 @@
 #include <mc/src-deps/coregraphics/TextureDescription.hpp>
 
 namespace TextureUtil {
+
 	static cg::ImageBuffer combineImage(cg::ImageBuffer& src, cg::ImageBuffer& dest) {
 		// basic validity and format checks
 		if (!dest.isValid() || !src.isValid()) {
@@ -72,6 +73,24 @@ namespace TextureUtil {
 		cg::ImageDescription outDesc = dest.mImageDescription;
 		Log::Info("Texture merge successful");
 		return cg::ImageBuffer(std::move(outBlob), std::move(outDesc));
+	}
+
+	static cg::ImageBuffer combineImages(std::vector<cg::ImageBuffer>& sources) {
+		// Combine all images in sources into one final image 
+		// by successive calls to combineImage
+		if (sources.size() == 0) {
+			Log::Error("combineImages: empty source list");
+			return cg::ImageBuffer();
+		}
+		cg::ImageBuffer result = sources[0];
+		for (std::size_t i = 1; i < sources.size(); ++i) {
+			result = combineImage(sources[i], result);
+			if (!result.isValid()) {
+				Log::Error("combineImages: failed at index {}", i);
+				return cg::ImageBuffer();
+			}
+		}
+		return result;
 	}
 
 
@@ -175,8 +194,9 @@ namespace TextureUtil {
 		const std::vector<uint32_t>& srcPacked,
 		const std::vector<uint32_t>& dstPacked
 	) {
-		if (srcPacked.size() != dstPacked.size()) {
-			Log::Error("paletteSwap: palette sizes mismatch {} != {}", srcPacked.size(), dstPacked.size());
+		
+		if(srcPacked.size() > dstPacked.size()) {
+			Log::Error("paletteSwap: palette sizes mismatch {} > {}", srcPacked.size(), dstPacked.size());
 			return cg::ImageBuffer();
 		}
 		const std::size_t count = srcPacked.size();
